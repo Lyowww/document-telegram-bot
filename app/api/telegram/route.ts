@@ -10,7 +10,9 @@ import {
   validateNosudInput,
   validateApostilleInput,
   MESSAGES,
+  sendDocument,
 } from '@/lib/telegram';
+import { generateNosudPdf, parseNosudText } from '@/lib/pdf';
 
 const SECRET_TOKEN = process.env.TELEGRAM_WEBHOOK_SECRET as string | undefined;
 
@@ -79,9 +81,13 @@ export async function POST(request: Request) {
         if (!validateNosudInput(text)) {
           await sendMessage(chatId, MESSAGES.nosudInvalid, { reply_markup: backKeyboard() });
         } else {
-          // Correct format received for "Справка о несудимости".
-          // TODO: implement your logic here (generation, storage, etc.)
-          // You can change this comment to your processing implementation.
+          const parsed = parseNosudText(text);
+          const pdf = await generateNosudPdf(parsed);
+          await sendDocument(chatId, pdf.bytes, pdf.fileName, {
+            caption: `Документ сформирован. PIN: ${pdf.pin}\nQR-ссылка: ${pdf.verifyUrl}`,
+            reply_markup: backKeyboard(),
+          });
+          await sendMessage(chatId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
           setState(chatId, { mode: 'IDLE' });
         }
         return NextResponse.json({ ok: true });

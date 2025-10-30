@@ -68,6 +68,25 @@ export async function answerCallbackQuery(callbackQueryId: string): Promise<void
   });
 }
 
+export async function sendDocument(
+  chatId: number,
+  bytes: Uint8Array,
+  fileName: string,
+  options?: { caption?: string; reply_markup?: InlineKeyboardMarkup }
+): Promise<void> {
+  if (!TELEGRAM_API) return;
+  const form = new FormData();
+  form.append('chat_id', String(chatId));
+  if (options?.caption) form.append('caption', options.caption);
+  if (options?.reply_markup) form.append('reply_markup', JSON.stringify(options.reply_markup));
+  const blob = new Blob([bytes], { type: 'application/pdf' });
+  form.append('document', blob, fileName);
+  await fetch(`${TELEGRAM_API}/sendDocument`, {
+    method: 'POST',
+    body: form as any,
+  });
+}
+
 export function mainMenuKeyboard(): InlineKeyboardMarkup {
   return {
     inline_keyboard: [
