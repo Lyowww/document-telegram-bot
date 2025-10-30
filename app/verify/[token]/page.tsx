@@ -6,6 +6,7 @@ type Props = { params: { token: string } };
 
 export default function VerifyPage({ params }: Props) {
   const { token } = params;
+  console.log(token);
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
