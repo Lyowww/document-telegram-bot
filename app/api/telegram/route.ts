@@ -76,7 +76,26 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true });
       }
 
+      if (text === '/start') {
+        setState(chatId, { mode: 'IDLE' });
+        await sendMessage(chatId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
+        return NextResponse.json({ ok: true });
+      }
+
       const state = getState(chatId);
+
+      // Fallback: process valid NOSUD input even if state was lost (e.g., serverless cold start)
+      if (state.mode !== 'AWAIT_APOSTILLE_INPUT' && validateNosudInput(text)) {
+        const parsed = parseNosudText(text);
+        const pdf = await generateNosudPdf(parsed);
+        await sendDocument(chatId, pdf.bytes, pdf.fileName, {
+          caption: `Документ сформирован. PIN: ${pdf.pin}\nQR-ссылка: ${pdf.verifyUrl}`,
+          reply_markup: backKeyboard(),
+        });
+        await sendMessage(chatId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
+        setState(chatId, { mode: 'IDLE' });
+        return NextResponse.json({ ok: true });
+      }
       if (state.mode === 'AWAIT_NOSUD_INPUT') {
         if (!validateNosudInput(text)) {
           await sendMessage(chatId, MESSAGES.nosudInvalid, { reply_markup: backKeyboard() });
