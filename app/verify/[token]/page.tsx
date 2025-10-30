@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
+import { useParams } from 'next/navigation';
 
-type Props = { params: { token: string } };
-
-export default function VerifyPage({ params }: Props) {
-  const { token } = params;
+export default function VerifyPage() {
+  const { token } = useParams<{ token: string }>();
   console.log(token);
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
