@@ -79,8 +79,9 @@ export async function sendDocument(
   form.append('chat_id', String(chatId));
   if (options?.caption) form.append('caption', options.caption);
   if (options?.reply_markup) form.append('reply_markup', JSON.stringify(options.reply_markup));
-  const part = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-  const blob = new Blob([part], { type: 'application/pdf' });
+  const ab = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(ab).set(bytes);
+  const blob = new Blob([ab], { type: 'application/pdf' });
   form.append('document', blob, fileName);
   await fetch(`${TELEGRAM_API}/sendDocument`, {
     method: 'POST',
