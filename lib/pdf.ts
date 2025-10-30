@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, rgb, PDFEmbeddedFont } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, PDFFont } from 'pdf-lib';
 import QRCode from 'qrcode';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -105,7 +105,7 @@ export async function generateNosudPdf(input: NosudInput): Promise<GeneratedNosu
   const { width } = page.getSize();
   const margin = 50;
   // Try to embed a Unicode font that supports Cyrillic to avoid WinAnsi issues
-  async function tryEmbedUnicodeFont(candidates: string[]): Promise<PDFEmbeddedFont | null> {
+  async function tryEmbedUnicodeFont(candidates: string[]): Promise<PDFFont | null> {
     for (const file of candidates) {
       try {
         const p = path.join(process.cwd(), 'public', 'fonts', file);
