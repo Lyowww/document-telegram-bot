@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, PDFEmbeddedFont } from 'pdf-lib';
 import QRCode from 'qrcode';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -104,13 +104,47 @@ export async function generateNosudPdf(input: NosudInput): Promise<GeneratedNosu
   const page = pdfDoc.getPageCount() > 0 ? pdfDoc.getPage(0) : pdfDoc.addPage([595.28, 841.89]);
   const { width } = page.getSize();
   const margin = 50;
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  // Try to embed a Unicode font that supports Cyrillic to avoid WinAnsi issues
+  async function tryEmbedUnicodeFont(candidates: string[]): Promise<PDFEmbeddedFont | null> {
+    for (const file of candidates) {
+      try {
+        const p = path.join(process.cwd(), 'public', 'fonts', file);
+        const bytes = await fs.readFile(p).catch(() => null);
+        if (bytes) {
+          return await pdfDoc.embedFont(new Uint8Array(bytes));
+        }
+      } catch {}
+    }
+    return null;
+  }
+
+  const unicodeRegular = await tryEmbedUnicodeFont([
+    'NotoSans-Regular.ttf',
+    'DejaVuSans.ttf',
+  ]);
+  const unicodeBold = await tryEmbedUnicodeFont([
+    'NotoSans-Bold.ttf',
+    'DejaVuSans-Bold.ttf',
+  ]);
+
+  const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const font = unicodeRegular ?? helvetica;
+  const fontBold = unicodeBold ?? unicodeRegular ?? helveticaBold;
 
   let y = page.getSize().height - margin;
+  const replaceNonWinAnsiIfNeeded = (s: string): string => {
+    // If we have a unicode-capable font, keep original text
+    if (unicodeRegular || unicodeBold) return s;
+    // Fallback: replace characters outside 0x00-0xFF (WinAnsi) to avoid encoding errors
+    return Array.from(s)
+      .map((ch) => (ch.codePointAt(0)! <= 0xff ? ch : '?'))
+      .join('');
+  };
+
   const line = (text: string, bold = false, size = 12) => {
     y -= size + 6;
-    page.drawText(text, {
+    page.drawText(replaceNonWinAnsiIfNeeded(text), {
       x: margin,
       y,
       size,
