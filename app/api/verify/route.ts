@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { verifyPin, hasToken } from '@/lib/store';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const { token, pin } = (await request.json()) as { token?: string; pin?: string };
     if (!token || !pin) {
