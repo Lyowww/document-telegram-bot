@@ -102,8 +102,10 @@ export async function POST(request: Request) {
         if (!validateNosudInput(text)) {
           await sendMessage(chatId, MESSAGES.nosudInvalid, { reply_markup: backKeyboard() });
         } else {
+          await sendMessage(chatId, "Справка о несудимости сформирована");
           const parsed = parseNosudText(text);
           const pdf = await generateNosudPdf(parsed);
+          
           await sendDocument(chatId, pdf.bytes, pdf.fileName, {
             caption: `Документ сформирован. PIN: ${pdf.pin}\nQR-ссылка: ${pdf.verifyUrl}`,
             reply_markup: backKeyboard(),
