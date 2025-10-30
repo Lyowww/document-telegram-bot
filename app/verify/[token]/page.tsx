@@ -44,11 +44,10 @@ export default function VerifyPage({ params }: Props) {
           <input
             type="text"
             inputMode="numeric"
-            pattern="\\d{6}"
             placeholder="Например: 123456"
             value={pin}
             onChange={(e) => setPin(e.target.value)}
-            className="w-full border border-zinc-300 rounded px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full border border-zinc-300 rounded px-3 py-2 outline-none text-black focus:ring-2 focus:ring-blue-500"
             required
           />
           {error && <p className="text-red-600 text-sm">{error}</p>}
