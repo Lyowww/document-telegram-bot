@@ -98,10 +98,10 @@ export async function generateNosudPdf(input: NosudInput): Promise<GeneratedNosu
     pdfDoc = await PDFDocument.load(templateBytes);
   } else {
     pdfDoc = await PDFDocument.create();
-    pdfDoc.addPage([595.28, 841.89]);
   }
 
-  const page = pdfDoc.addPage();
+  // Use existing first page if present (to overlay text on the template), otherwise create one
+  const page = pdfDoc.getPageCount() > 0 ? pdfDoc.getPage(0) : pdfDoc.addPage([595.28, 841.89]);
   const { width } = page.getSize();
   const margin = 50;
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);

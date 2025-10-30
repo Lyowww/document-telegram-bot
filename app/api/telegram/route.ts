@@ -14,6 +14,8 @@ import {
 } from '@/lib/telegram';
 import { generateNosudPdf, parseNosudText } from '@/lib/pdf';
 
+export const runtime = 'nodejs';
+
 const SECRET_TOKEN = process.env.TELEGRAM_WEBHOOK_SECRET as string | undefined;
 
 export async function POST(request: Request) {
