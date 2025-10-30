@@ -88,14 +88,18 @@ export async function POST(request: Request) {
 
       // Fallback: process valid NOSUD input even if state was lost (e.g., serverless cold start)
       if (state.mode !== 'AWAIT_APOSTILLE_INPUT' && validateNosudInput(text)) {
-        const parsed = parseNosudText(text);
-        const pdf = await generateNosudPdf(parsed);
-        await sendDocument(chatId, pdf.bytes, pdf.fileName, {
-          caption: `Документ сформирован. PIN: ${pdf.pin}\nQR-ссылка: ${pdf.verifyUrl}`,
-          reply_markup: backKeyboard(),
-        });
-        await sendMessage(chatId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
-        setState(chatId, { mode: 'IDLE' });
+        try {
+          const parsed = parseNosudText(text);
+          const pdf = await generateNosudPdf(parsed);
+          await sendDocument(chatId, pdf.bytes, pdf.fileName, {
+            caption: `Документ сформирован. PIN: ${pdf.pin}\nQR-ссылка: ${pdf.verifyUrl}`,
+            reply_markup: backKeyboard(),
+          });
+          await sendMessage(chatId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
+          setState(chatId, { mode: 'IDLE' });
+        } catch (err: any) {
+          await sendMessage(chatId, `Ошибка при отправке документа: ${err?.message ?? 'неизвестная ошибка'}`);
+        }
         return NextResponse.json({ ok: true });
       }
       if (state.mode === 'AWAIT_NOSUD_INPUT') {
@@ -103,15 +107,18 @@ export async function POST(request: Request) {
           await sendMessage(chatId, MESSAGES.nosudInvalid, { reply_markup: backKeyboard() });
         } else {
           await sendMessage(chatId, "Справка о несудимости сформирована");
-          const parsed = parseNosudText(text);
-          const pdf = await generateNosudPdf(parsed);
-          
-          await sendDocument(chatId, pdf.bytes, pdf.fileName, {
-            caption: `Документ сформирован. PIN: ${pdf.pin}\nQR-ссылка: ${pdf.verifyUrl}`,
-            reply_markup: backKeyboard(),
-          });
-          await sendMessage(chatId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
-          setState(chatId, { mode: 'IDLE' });
+          try {
+            const parsed = parseNosudText(text);
+            const pdf = await generateNosudPdf(parsed);
+            await sendDocument(chatId, pdf.bytes, pdf.fileName, {
+              caption: `Документ сформирован. PIN: ${pdf.pin}\nQR-ссылка: ${pdf.verifyUrl}`,
+              reply_markup: backKeyboard(),
+            });
+            await sendMessage(chatId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
+            setState(chatId, { mode: 'IDLE' });
+          } catch (err: any) {
+            await sendMessage(chatId, `Ошибка при отправке документа: ${err?.message ?? 'неизвестная ошибка'}`);
+          }
         }
         return NextResponse.json({ ok: true });
       }

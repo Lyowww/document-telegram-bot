@@ -46,7 +46,7 @@ export async function sendMessage(
   options?: { reply_markup?: InlineKeyboardMarkup; parse_mode?: 'HTML' | 'Markdown' | 'MarkdownV2' }
 ): Promise<void> {
   const api = getTelegramApiBase();
-  await fetch(`${api}/sendMessage`, {
+  const res = await fetch(`${api}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -56,15 +56,23 @@ export async function sendMessage(
       parse_mode: options?.parse_mode,
     }),
   });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Telegram sendMessage failed: ${res.status} ${res.statusText} ${body}`);
+  }
 }
 
 export async function answerCallbackQuery(callbackQueryId: string): Promise<void> {
   const api = getTelegramApiBase();
-  await fetch(`${api}/answerCallbackQuery`, {
+  const res = await fetch(`${api}/answerCallbackQuery`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ callback_query_id: callbackQueryId }),
   });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Telegram answerCallbackQuery failed: ${res.status} ${res.statusText} ${body}`);
+  }
 }
 
 export async function sendDocument(
@@ -82,10 +90,14 @@ export async function sendDocument(
   new Uint8Array(ab).set(bytes);
   const blob = new Blob([ab], { type: 'application/pdf' });
   form.append('document', blob, fileName);
-  await fetch(`${api}/sendDocument`, {
+  const res = await fetch(`${api}/sendDocument`, {
     method: 'POST',
     body: form as any,
   });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Telegram sendDocument failed: ${res.status} ${res.statusText} ${body}`);
+  }
 }
 
 export function mainMenuKeyboard(): InlineKeyboardMarkup {
