@@ -31,23 +31,22 @@ export type InlineKeyboardMarkup = {
   inline_keyboard: InlineKeyboardButton[][];
 };
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN as string | undefined;
-if (!BOT_TOKEN) {
-  // Intentionally not throwing in module scope to avoid build-time crash
-  // The route will handle missing token with a 500.
+function getTelegramApiBase(): string {
+  const token = process.env.TELEGRAM_BOT_TOKEN as string | undefined;
+  if (!token) {
+    // Throw to ensure callers don't silently no-op when token is missing
+    throw new Error('Missing TELEGRAM_BOT_TOKEN');
+  }
+  return `https://api.telegram.org/bot${token}`;
 }
-
-const TELEGRAM_API = BOT_TOKEN
-  ? `https://api.telegram.org/bot${BOT_TOKEN}`
-  : undefined;
 
 export async function sendMessage(
   chatId: number,
   text: string,
   options?: { reply_markup?: InlineKeyboardMarkup; parse_mode?: 'HTML' | 'Markdown' | 'MarkdownV2' }
 ): Promise<void> {
-  if (!TELEGRAM_API) return;
-  await fetch(`${TELEGRAM_API}/sendMessage`, {
+  const api = getTelegramApiBase();
+  await fetch(`${api}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -60,8 +59,8 @@ export async function sendMessage(
 }
 
 export async function answerCallbackQuery(callbackQueryId: string): Promise<void> {
-  if (!TELEGRAM_API) return;
-  await fetch(`${TELEGRAM_API}/answerCallbackQuery`, {
+  const api = getTelegramApiBase();
+  await fetch(`${api}/answerCallbackQuery`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ callback_query_id: callbackQueryId }),
@@ -74,7 +73,7 @@ export async function sendDocument(
   fileName: string,
   options?: { caption?: string; reply_markup?: InlineKeyboardMarkup }
 ): Promise<void> {
-  if (!TELEGRAM_API) return;
+  const api = getTelegramApiBase();
   const form = new FormData();
   form.append('chat_id', String(chatId));
   if (options?.caption) form.append('caption', options.caption);
@@ -83,7 +82,7 @@ export async function sendDocument(
   new Uint8Array(ab).set(bytes);
   const blob = new Blob([ab], { type: 'application/pdf' });
   form.append('document', blob, fileName);
-  await fetch(`${TELEGRAM_API}/sendDocument`, {
+  await fetch(`${api}/sendDocument`, {
     method: 'POST',
     body: form as any,
   });
