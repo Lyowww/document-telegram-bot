@@ -9,7 +9,7 @@ import {
   setState,
   validateNosudInput,
   validateApostilleInput,
-  validateFirstInput,
+  validateFirstInput, 
   MESSAGES,
   sendDocument,
 } from '@/lib/telegram';
