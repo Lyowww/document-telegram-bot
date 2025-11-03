@@ -112,6 +112,9 @@ export function mainMenuKeyboard(): InlineKeyboardMarkup {
       [
         { text: '3️⃣Апостиль', callback_data: 'MENU_APOSTILLE' },
       ],
+      [
+        { text: '4️⃣First', callback_data: 'MENU_FIRST' },
+      ],
     ],
   };
 }
@@ -128,7 +131,8 @@ type UserState =
   | { mode: 'IDLE' }
   | { mode: 'AWAIT_NOSUD_INPUT' }
   | { mode: 'AWAIT_APOSTILLE_INPUT' }
-  | { mode: 'AWAIT_NOTARY_INPUT' }; // reserved for future use
+  | { mode: 'AWAIT_NOTARY_INPUT' } // reserved for future use
+  | { mode: 'AWAIT_FIRST_INPUT' };
 
 const chatIdToState = new Map<number, UserState>();
 
@@ -166,6 +170,15 @@ export function validateApostilleInput(input: string): boolean {
   return true;
 }
 
+export function validateFirstInput(input: string): boolean {
+  // Expect: Name, Surname (at minimum)
+  const parts = input.split(',').map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) return false;
+  const [name, surname] = parts;
+  if (!name || !surname) return false;
+  return true;
+}
+
 export const MESSAGES = {
   welcome:
     '👋 Добро пожаловать в бот генерации документов!\n\nВыберите, пожалуйста, тип документа, который хотите сформировать:',
@@ -177,6 +190,10 @@ export const MESSAGES = {
     '📄Пожалуйста, введите через запятую следующие данные: Ф.И.О. лица, подписавшего документ, и название организации\n\nПример: Ulmasov Bakhtiyor Abrorovich, CENTER OF PUBLIC SERVICES OF TAILOK DISTRICT',
   apostilleInvalid:
     '⚠️Неверный формат. Введите данные через запятую: Ф.И.О., Организация\n\nПример: Ulmasov Bakhtiyor Abrorovich, CENTER OF PUBLIC SERVICES OF TAILOK DISTRICT',
+  firstPrompt:
+    '📄Пожалуйста, введите через запятую следующие данные: Имя, Фамилия (и другие данные при необходимости)\n\nПример: John, Doe',
+  firstInvalid:
+    '⚠️Неверный формат. Введите данные через запятую: Имя, Фамилия\n\nПример: John, Doe',
 };
 
 

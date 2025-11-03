@@ -200,4 +200,119 @@ export function parseNosudText(input: string): NosudInput {
   return { lastName, firstName, middleName, birthDateDdMmYyyy, pinfl };
 }
 
+export type FirstInput = {
+  name: string;
+  surname: string;
+  [key: string]: string; // Allow additional fields
+};
+
+export type GeneratedFirst = {
+  token: string;
+  pin: string;
+  bytes: Uint8Array;
+  fileName: string;
+  verifyUrl: string;
+  generatedAt: Date;
+};
+
+export function parseFirstText(input: string): FirstInput {
+  const parts = input.split(',').map((p) => p.trim());
+  const [name, surname, ...rest] = parts;
+  const result: FirstInput = { name, surname };
+  // Add any additional fields if provided
+  rest.forEach((part, index) => {
+    result[`field${index + 1}`] = part;
+  });
+  return result;
+}
+
+export async function generateFirstPdf(input: FirstInput): Promise<GeneratedFirst> {
+  const pin = generatePin();
+  const token = createTokenWithPin(pin);
+  const baseUrl = getBaseUrl();
+  const verifyUrl = `${baseUrl}/verify/${token}`;
+
+  // Read the HTML template
+  const htmlPath = path.join(process.cwd(), 'public', 'first.html');
+  let htmlContent = await fs.readFile(htmlPath, 'utf-8');
+
+  // Replace the title in the h3 element with id="title"
+  const titleText = `${input.name} ${input.surname}`;
+  htmlContent = htmlContent.replace(
+    /<h3\s+id="title"[^>]*>[^<]*<\/h3>/i,
+    `<h3 id="title">${titleText}</h3>`
+  );
+
+  // Use puppeteer to generate PDF from HTML
+  let browser: any;
+  try {
+    // Try to use puppeteer-core with @sparticuz/chromium for serverless (AWS Lambda, Vercel)
+    const chromium = await import('@sparticuz/chromium');
+    const puppeteerCore = await import('puppeteer-core');
+    
+    // Check if we're in a serverless environment
+    const isServerless = process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL;
+    
+    if (isServerless) {
+      // Serverless environment: use @sparticuz/chromium
+      browser = await puppeteerCore.default.launch({
+        args: [...(chromium as any).args, '--hide-scrollbars', '--disable-web-security'],
+        defaultViewport: (chromium as any).defaultViewport,
+        executablePath: await (chromium as any).executablePath(),
+        headless: (chromium as any).headless,
+      });
+    } else {
+      // Local development: use regular puppeteer
+      const puppeteer = await import('puppeteer');
+      browser = await puppeteer.default.launch({ 
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      });
+    }
+  } catch (error) {
+    // Fallback: use regular puppeteer
+    const puppeteer = await import('puppeteer');
+    browser = await puppeteer.default.launch({ 
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+  }
+
+  try {
+    const page = await browser.newPage();
+    
+    // Set content with the modified HTML
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    
+    // Generate PDF
+    const pdfBytes = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '20px',
+        right: '20px',
+        bottom: '20px',
+        left: '20px',
+      },
+    });
+
+    await browser.close();
+
+    const bytes = new Uint8Array(pdfBytes);
+    setBytesForToken(token, bytes);
+
+    return {
+      token,
+      pin,
+      bytes,
+      fileName: `FIRST_${input.name}_${input.surname}_${Date.now()}.pdf`,
+      verifyUrl,
+      generatedAt: new Date(),
+    };
+  } catch (error: any) {
+    await browser.close().catch(() => {});
+    throw new Error(`Failed to generate PDF: ${error?.message ?? 'unknown error'}`);
+  }
+}
+
 

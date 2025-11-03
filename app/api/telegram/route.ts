@@ -9,10 +9,11 @@ import {
   setState,
   validateNosudInput,
   validateApostilleInput,
+  validateFirstInput,
   MESSAGES,
   sendDocument,
 } from '@/lib/telegram';
-import { generateNosudPdf, parseNosudText } from '@/lib/pdf';
+import { generateNosudPdf, parseNosudText, generateFirstPdf, parseFirstText } from '@/lib/pdf';
 
 export const runtime = 'nodejs';
 
@@ -54,6 +55,11 @@ export async function POST(request: Request) {
           case 'MENU_APOSTILLE': {
             setState(chatId, { mode: 'AWAIT_APOSTILLE_INPUT' });
             await sendMessage(chatId, MESSAGES.apostillePrompt, { reply_markup: backKeyboard() });
+            break;
+          }
+          case 'MENU_FIRST': {
+            setState(chatId, { mode: 'AWAIT_FIRST_INPUT' });
+            await sendMessage(chatId, MESSAGES.firstPrompt, { reply_markup: backKeyboard() });
             break;
           }
           case 'BACK_TO_MENU': {
@@ -131,6 +137,27 @@ export async function POST(request: Request) {
           // TODO: implement your logic here (generation, storage, etc.)
           // You can change this comment to your processing implementation.
           setState(chatId, { mode: 'IDLE' });
+        }
+        return NextResponse.json({ ok: true });
+      }
+
+      if (state.mode === 'AWAIT_FIRST_INPUT') {
+        if (!validateFirstInput(text)) {
+          await sendMessage(chatId, MESSAGES.firstInvalid, { reply_markup: backKeyboard() });
+        } else {
+          await sendMessage(chatId, "Документ First сформирован");
+          try {
+            const parsed = parseFirstText(text);
+            const pdf = await generateFirstPdf(parsed);
+            await sendDocument(chatId, pdf.bytes, pdf.fileName, {
+              caption: `Документ сформирован. PIN: ${pdf.pin}\nQR-ссылка: ${pdf.verifyUrl}`,
+              reply_markup: backKeyboard(),
+            });
+            await sendMessage(chatId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
+            setState(chatId, { mode: 'IDLE' });
+          } catch (err: any) {
+            await sendMessage(chatId, `Ошибка при отправке документа: ${err?.message ?? 'неизвестная ошибка'}`);
+          }
         }
         return NextResponse.json({ ok: true });
       }
