@@ -1,10 +1,11 @@
 {
   "functions": {
     "app/**": {
-      "external_node_modules": ["@sparticuz/chromium", "puppeteer-core"],
-      "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
+      "runtime": "nodejs20.x",
+      "includeFiles": [
+        "node_modules/@sparticuz/chromium/**",
+        "node_modules/puppeteer-core/**"
+      ]
     }
   }
 }
-
-
