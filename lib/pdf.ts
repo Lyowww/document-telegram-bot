@@ -245,37 +245,42 @@ export async function generateFirstPdf(input: FirstInput): Promise<GeneratedFirs
 
   // Use puppeteer to generate PDF from HTML
   let browser: any;
-  try {
-    // Try to use puppeteer-core with @sparticuz/chromium for serverless (AWS Lambda, Vercel)
-    const chromium = await import('@sparticuz/chromium');
-    const puppeteerCore = await import('puppeteer-core');
-    
-    // Check if we're in a serverless environment
-    const isServerless = process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL;
-    
-    if (isServerless) {
-      // Serverless environment: use @sparticuz/chromium
+  
+  // Check if we're in a serverless environment
+  const isServerless = process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL;
+  
+  if (isServerless) {
+    // Serverless environment: use puppeteer-core with @sparticuz/chromium
+    try {
+      const chromium = await import('@sparticuz/chromium');
+      const puppeteerCore = await import('puppeteer-core');
+      
+      // Use chromium API with proper type casting for serverless
+      const chromiumModule = chromium as any;
+      if (chromiumModule.setGraphicsMode) {
+        chromiumModule.setGraphicsMode(false);
+      }
+      
       browser = await puppeteerCore.default.launch({
-        args: [...(chromium as any).args, '--hide-scrollbars', '--disable-web-security'],
-        defaultViewport: (chromium as any).defaultViewport,
-        executablePath: await (chromium as any).executablePath(),
-        headless: (chromium as any).headless,
+        args: chromiumModule.args || ['--no-sandbox', '--disable-setuid-sandbox'],
+        defaultViewport: chromiumModule.defaultViewport || { width: 1920, height: 1080 },
+        executablePath: chromiumModule.executablePath ? await chromiumModule.executablePath() : undefined,
+        headless: chromiumModule.headless !== undefined ? chromiumModule.headless : true,
       });
-    } else {
-      // Local development: use regular puppeteer
+    } catch (error: any) {
+      throw new Error(`Failed to launch browser in serverless: ${error?.message ?? 'unknown error'}`);
+    }
+  } else {
+    // Local development: use regular puppeteer (will find Chrome automatically)
+    try {
       const puppeteer = await import('puppeteer');
       browser = await puppeteer.default.launch({ 
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
       });
+    } catch (error: any) {
+      throw new Error(`Failed to launch browser: ${error?.message ?? 'unknown error'}. Make sure Chrome is installed with: npx puppeteer browsers install chrome`);
     }
-  } catch (error) {
-    // Fallback: use regular puppeteer
-    const puppeteer = await import('puppeteer');
-    browser = await puppeteer.default.launch({ 
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
   }
 
   try {

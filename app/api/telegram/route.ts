@@ -44,7 +44,7 @@ export async function POST(request: Request) {
         switch (data) {
           case 'MENU_NOSUD': {
             setState(chatId, { mode: 'AWAIT_NOSUD_INPUT' });
-            await sendMessage(chatId, MESSAGES.nosudPrompt, { reply_markup: backKeyboard() });
+            await sendMessage(chatId, MESSAGES.firstPrompt, { reply_markup: backKeyboard() });
             break;
           }
           case 'MENU_NOTARY': {
@@ -92,11 +92,11 @@ export async function POST(request: Request) {
 
       const state = getState(chatId);
 
-      // Fallback: process valid NOSUD input even if state was lost (e.g., serverless cold start)
-      if (state.mode !== 'AWAIT_APOSTILLE_INPUT' && validateNosudInput(text)) {
+      // Fallback: process valid FIRST input even if state was lost (e.g., serverless cold start)
+      if (state.mode !== 'AWAIT_APOSTILLE_INPUT' && validateFirstInput(text)) {
         try {
-          const parsed = parseNosudText(text);
-          const pdf = await generateNosudPdf(parsed);
+          const parsed = parseFirstText(text);
+          const pdf = await generateFirstPdf(parsed);
           await sendDocument(chatId, pdf.bytes, pdf.fileName, {
             caption: `Документ сформирован. PIN: ${pdf.pin}\nQR-ссылка: ${pdf.verifyUrl}`,
             reply_markup: backKeyboard(),
@@ -109,13 +109,13 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true });
       }
       if (state.mode === 'AWAIT_NOSUD_INPUT') {
-        if (!validateNosudInput(text)) {
-          await sendMessage(chatId, MESSAGES.nosudInvalid, { reply_markup: backKeyboard() });
+        if (!validateFirstInput(text)) {
+          await sendMessage(chatId, MESSAGES.firstInvalid, { reply_markup: backKeyboard() });
         } else {
-          await sendMessage(chatId, "Справка о несудимости сформирована");
+          await sendMessage(chatId, "Документ First сформирован");
           try {
-            const parsed = parseNosudText(text);
-            const pdf = await generateNosudPdf(parsed);
+            const parsed = parseFirstText(text);
+            const pdf = await generateFirstPdf(parsed);
             await sendDocument(chatId, pdf.bytes, pdf.fileName, {
               caption: `Документ сформирован. PIN: ${pdf.pin}\nQR-ссылка: ${pdf.verifyUrl}`,
               reply_markup: backKeyboard(),
