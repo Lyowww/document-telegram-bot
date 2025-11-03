@@ -245,54 +245,44 @@ export async function generateFirstPdf(input: FirstInput): Promise<GeneratedFirs
 
   // Use puppeteer to generate PDF from HTML
   let browser: any;
-  
-  // Always try regular puppeteer first (works in local dev and many serverless environments)
-  try {
-    const puppeteer = await import('puppeteer');
-    browser = await puppeteer.default.launch({ 
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
-  } catch (puppeteerError: any) {
-    // If regular puppeteer fails, try serverless approach with puppeteer-core
-    const isServerless = process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL;
-    
-    if (isServerless) {
-      try {
-        const chromium = await import('@sparticuz/chromium');
-        const puppeteerCore = await import('puppeteer-core');
-        
-        // Use chromium API with proper type casting for serverless
-        const chromiumModule = chromium as any;
-        if (chromiumModule.setGraphicsMode) {
-          chromiumModule.setGraphicsMode(false);
-        }
-        
-        // Get executable path - this is required for puppeteer-core
-        let executablePath: string | undefined;
-        if (typeof chromiumModule.executablePath === 'function') {
-          executablePath = await chromiumModule.executablePath();
-        } else if (typeof chromiumModule.executablePath === 'string') {
-          executablePath = chromiumModule.executablePath;
-        }
-        
-        // If we don't have executablePath, we can't use puppeteer-core
-        if (!executablePath) {
-          throw new Error('executablePath not available from chromium module');
-        }
-        
-        browser = await puppeteerCore.default.launch({
-          args: chromiumModule.args || ['--no-sandbox', '--disable-setuid-sandbox'],
-          defaultViewport: chromiumModule.defaultViewport || { width: 1920, height: 1080 },
-          executablePath: executablePath,
-          headless: chromiumModule.headless !== undefined ? chromiumModule.headless : true,
-        });
-      } catch (serverlessError: any) {
-        throw new Error(`Failed to launch browser with both puppeteer and puppeteer-core: ${puppeteerError.message}. Serverless error: ${serverlessError.message}. Make sure Chrome is installed with: npx puppeteer browsers install chrome`);
+
+  // Prefer serverless path on platforms like Vercel/AWS Lambda
+  const isServerless = Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL);
+
+  if (isServerless) {
+    try {
+      const chromium = (await import('@sparticuz/chromium')).default;
+      const puppeteerCore = (await import('puppeteer-core')).default;
+
+      if (typeof (chromium as any).setGraphicsMode === 'function') {
+        (chromium as any).setGraphicsMode(false);
       }
-    } else {
-      // Not serverless and puppeteer failed - throw original error
-      throw new Error(`Failed to launch browser: ${puppeteerError.message}. Make sure Chrome is installed with: npx puppeteer browsers install chrome`);
+
+      const executablePath = await chromium.executablePath();
+      if (!executablePath) {
+        throw new Error('chromium.executablePath() returned undefined');
+      }
+
+      const c: any = chromium as any;
+      browser = await puppeteerCore.launch({
+        args: c.args || ['--no-sandbox', '--disable-setuid-sandbox'],
+        defaultViewport: c.defaultViewport,
+        executablePath,
+        headless: c.headless ?? true,
+      });
+    } catch (serverlessError: any) {
+      throw new Error(`Serverless Chromium launch failed: ${serverlessError?.message ?? 'unknown error'}`);
+    }
+  } else {
+    // Local/dev or full Node environment: use full puppeteer package
+    try {
+      const puppeteer = (await import('puppeteer')).default as any;
+      browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      });
+    } catch (puppeteerError: any) {
+      throw new Error(`Failed to launch local Chrome: ${puppeteerError?.message ?? 'unknown error'}`);
     }
   }
 

@@ -57,11 +57,11 @@ export async function POST(request: Request) {
             await sendMessage(chatId, MESSAGES.apostillePrompt, { reply_markup: backKeyboard() });
             break;
           }
-          case 'MENU_FIRST': {
-            setState(chatId, { mode: 'AWAIT_FIRST_INPUT' });
-            await sendMessage(chatId, MESSAGES.firstPrompt, { reply_markup: backKeyboard() });
-            break;
-          }
+          // case 'MENU_FIRST': {
+          //   setState(chatId, { mode: 'AWAIT_FIRST_INPUT' });
+          //   await sendMessage(chatId, MESSAGES.firstPrompt, { reply_markup: backKeyboard() });
+          //   break;
+          // }
           case 'BACK_TO_MENU': {
             setState(chatId, { mode: 'IDLE' });
             await sendMessage(chatId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
