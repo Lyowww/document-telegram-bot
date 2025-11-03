@@ -9,7 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@sparticuz/chromium": "^142.0.0",
+    "@sparticuz/chromium": "^141.0.0",
     "next": "16.0.1",
     "pdf-lib": "^1.17.1",
     "puppeteer": "^24.28.0",

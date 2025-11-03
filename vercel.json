@@ -1,9 +1,9 @@
 {
-  "version": 2,
   "functions": {
     "app/**": {
-      "runtime": "nodejs20.x",
-      "includeFiles": "node_modules/@sparticuz/chromium/**"
+      "includeFiles": "node_modules/@sparticuz/chromium/bin/**"
     }
   }
 }
+
+
