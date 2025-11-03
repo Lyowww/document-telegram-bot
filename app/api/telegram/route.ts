@@ -20,7 +20,6 @@ export const runtime = 'nodejs';
 const SECRET_TOKEN = process.env.TELEGRAM_WEBHOOK_SECRET as string | undefined;
 
 export async function POST(request: Request) {
-  // Optional security: verify Telegram secret token header if provided
   if (SECRET_TOKEN) {
     const header = request.headers.get('x-telegram-bot-api-secret-token');
     if (header !== SECRET_TOKEN) {
@@ -35,7 +34,6 @@ export async function POST(request: Request) {
   const update = (await request.json()) as TelegramUpdate;
 
   try {
-    // Handle callback buttons
     if (update.callback_query) {
       const cq = update.callback_query;
       const chatId = cq.message?.chat.id;
@@ -49,7 +47,6 @@ export async function POST(request: Request) {
           }
           case 'MENU_NOTARY': {
             setState(chatId, { mode: 'AWAIT_NOTARY_INPUT' });
-            // Intentionally no message; user will implement later.
             break;
           }
           case 'MENU_APOSTILLE': {
@@ -57,11 +54,6 @@ export async function POST(request: Request) {
             await sendMessage(chatId, MESSAGES.apostillePrompt, { reply_markup: backKeyboard() });
             break;
           }
-          // case 'MENU_FIRST': {
-          //   setState(chatId, { mode: 'AWAIT_FIRST_INPUT' });
-          //   await sendMessage(chatId, MESSAGES.firstPrompt, { reply_markup: backKeyboard() });
-          //   break;
-          // }
           case 'BACK_TO_MENU': {
             setState(chatId, { mode: 'IDLE' });
             await sendMessage(chatId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
@@ -73,7 +65,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    // Handle messages
     if (update.message && update.message.text) {
       const { chat, text } = update.message;
       const chatId = chat.id;
@@ -92,7 +83,6 @@ export async function POST(request: Request) {
 
       const state = getState(chatId);
 
-      // Fallback: process valid FIRST input even if state was lost (e.g., serverless cold start)
       if (state.mode !== 'AWAIT_APOSTILLE_INPUT' && validateFirstInput(text)) {
         try {
           const parsed = parseFirstText(text);
@@ -133,36 +123,11 @@ export async function POST(request: Request) {
         if (!validateApostilleInput(text)) {
           await sendMessage(chatId, MESSAGES.apostilleInvalid, { reply_markup: backKeyboard() });
         } else {
-          // Correct format received for "Апостиль".
-          // TODO: implement your logic here (generation, storage, etc.)
-          // You can change this comment to your processing implementation.
           setState(chatId, { mode: 'IDLE' });
         }
         return NextResponse.json({ ok: true });
       }
 
-      if (state.mode === 'AWAIT_FIRST_INPUT') {
-        if (!validateFirstInput(text)) {
-          await sendMessage(chatId, MESSAGES.firstInvalid, { reply_markup: backKeyboard() });
-        } else {
-          await sendMessage(chatId, "Документ First сформирован");
-          try {
-            const parsed = parseFirstText(text);
-            const pdf = await generateFirstPdf(parsed);
-            await sendDocument(chatId, pdf.bytes, pdf.fileName, {
-              caption: `Документ сформирован. PIN: ${pdf.pin}\nQR-ссылка: ${pdf.verifyUrl}`,
-              reply_markup: backKeyboard(),
-            });
-            await sendMessage(chatId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
-            setState(chatId, { mode: 'IDLE' });
-          } catch (err: any) {
-            await sendMessage(chatId, `Ошибка при отправке документа: ${err?.message ?? 'неизвестная ошибка'}`);
-          }
-        }
-        return NextResponse.json({ ok: true });
-      }
-
-      // If user is in IDLE or NOTARY flow, do nothing special
       return NextResponse.json({ ok: true });
     }
 

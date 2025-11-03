@@ -111,10 +111,7 @@ export function mainMenuKeyboard(): InlineKeyboardMarkup {
       ],
       [
         { text: '3️⃣Апостиль', callback_data: 'MENU_APOSTILLE' },
-      ],
-      [
-        { text: '4️⃣First', callback_data: 'MENU_FIRST' },
-      ],
+      ]
     ],
   };
 }
@@ -125,14 +122,11 @@ export function backKeyboard(): InlineKeyboardMarkup {
   };
 }
 
-// Simple per-chat state kept in-memory. Suitable for single-instance deployments.
-// For serverless multi-instance, replace with durable storage (KV/DB).
 type UserState =
   | { mode: 'IDLE' }
   | { mode: 'AWAIT_NOSUD_INPUT' }
   | { mode: 'AWAIT_APOSTILLE_INPUT' }
-  | { mode: 'AWAIT_NOTARY_INPUT' } // reserved for future use
-  | { mode: 'AWAIT_FIRST_INPUT' };
+  | { mode: 'AWAIT_NOTARY_INPUT' }
 
 const chatIdToState = new Map<number, UserState>();
 
@@ -149,7 +143,6 @@ const PINFL_REGEX = /^\d{14}$/;
 const DATE_DDMMYYYY_REGEX = /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[0-2])\.(19|20)\d{2}$/;
 
 export function validateNosudInput(input: string): boolean {
-  // Expect: LASTNAME, FIRSTNAME, MIDDLENAME, DD.MM.YYYY, PINFL
   const parts = input.split(',').map((p) => p.trim()).filter(Boolean);
   if (parts.length !== 5) return false;
   const [last, first, middle, date, pinfl] = parts;
@@ -160,18 +153,15 @@ export function validateNosudInput(input: string): boolean {
 }
 
 export function validateApostilleInput(input: string): boolean {
-  // Expect: Full Name, Organization
   const parts = input.split(',').map((p) => p.trim()).filter(Boolean);
   if (parts.length !== 2) return false;
   const [fullName, org] = parts;
   if (!fullName || !org) return false;
-  // minimal additional sanity: name must include space(s)
   if (!/\s+/.test(fullName)) return false;
   return true;
 }
 
 export function validateFirstInput(input: string): boolean {
-  // Expect: Name, Surname (at minimum)
   const parts = input.split(',').map((p) => p.trim()).filter(Boolean);
   if (parts.length < 2) return false;
   const [name, surname] = parts;
