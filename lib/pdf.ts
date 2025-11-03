@@ -232,95 +232,50 @@ export async function generateFirstPdf(input: FirstInput): Promise<GeneratedFirs
   const baseUrl = getBaseUrl();
   const verifyUrl = `${baseUrl}/verify/${token}`;
 
-  // Read the HTML template
+  // Read the HTML template and inject dynamic title
   const htmlPath = path.join(process.cwd(), 'public', 'first.html');
   let htmlContent = await fs.readFile(htmlPath, 'utf-8');
-
-  // Replace the title in the h3 element with id="title"
   const titleText = `${input.name} ${input.surname}`;
   htmlContent = htmlContent.replace(
     /<h3\s+id="title"[^>]*>[^<]*<\/h3>/i,
     `<h3 id="title">${titleText}</h3>`
   );
 
-  // Use puppeteer to generate PDF from HTML
-  let browser: any;
+  // Convert HTML to PDF via Pdfcrowd API
+  const pdfcrowdUser = process.env.PDFCROWD_USERNAME || 'demo';
+  const pdfcrowdKey = process.env.PDFCROWD_APIKEY || 'demo';
+  const basicAuth = Buffer.from(`${pdfcrowdUser}:${pdfcrowdKey}`, 'utf-8').toString('base64');
 
-  // Prefer serverless path on platforms like Vercel/AWS Lambda
-  const isServerless = Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL);
+  const form = new FormData();
+  form.append('content_viewport_width', 'balanced');
+  const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+  form.append('file', htmlBlob, 'first.html');
 
-  if (isServerless) {
-    try {
-      const chromium = (await import('@sparticuz/chromium')).default;
-      const puppeteerCore = (await import('puppeteer-core')).default;
+  const response = await fetch('https://api.pdfcrowd.com/convert/24.04/', {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${basicAuth}`,
+    },
+    body: form,
+  });
 
-      if (typeof (chromium as any).setGraphicsMode === 'function') {
-        (chromium as any).setGraphicsMode(false);
-      }
-
-      const executablePath = await chromium.executablePath();
-      if (!executablePath) {
-        throw new Error('chromium.executablePath() returned undefined');
-      }
-
-      const c: any = chromium as any;
-      browser = await puppeteerCore.launch({
-        args: c.args || ['--no-sandbox', '--disable-setuid-sandbox'],
-        defaultViewport: c.defaultViewport,
-        executablePath,
-        headless: c.headless ?? true,
-      });
-    } catch (serverlessError: any) {
-      throw new Error(`Serverless Chromium launch failed: ${serverlessError?.message ?? 'unknown error'}`);
-    }
-  } else {
-    // Local/dev or full Node environment: use full puppeteer package
-    try {
-      const puppeteer = (await import('puppeteer')).default as any;
-      browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      });
-    } catch (puppeteerError: any) {
-      throw new Error(`Failed to launch local Chrome: ${puppeteerError?.message ?? 'unknown error'}`);
-    }
+  if (!response.ok) {
+    const errText = await response.text().catch(() => '');
+    throw new Error(`Pdfcrowd conversion failed: ${response.status} ${response.statusText} ${errText}`);
   }
 
-  try {
-    const page = await browser.newPage();
-    
-    // Set content with the modified HTML
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-    
-    // Generate PDF
-    const pdfBytes = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '20px',
-        right: '20px',
-        bottom: '20px',
-        left: '20px',
-      },
-    });
+  const arrayBuffer = await response.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  setBytesForToken(token, bytes);
 
-    await browser.close();
-
-    const bytes = new Uint8Array(pdfBytes);
-    setBytesForToken(token, bytes);
-
-    return {
-      token,
-      pin,
-      bytes,
-      fileName: `FIRST_${input.name}_${input.surname}_${Date.now()}.pdf`,
-      verifyUrl,
-      generatedAt: new Date(),
-    };
-  } catch (error: any) {
-    await browser.close().catch(() => {});
-    throw new Error(`Failed to generate PDF: ${error?.message ?? 'unknown error'}`);
-  }
+  return {
+    token,
+    pin,
+    bytes,
+    fileName: `FIRST_${input.name}_${input.surname}_${Date.now()}.pdf`,
+    verifyUrl,
+    generatedAt: new Date(),
+  };
 }
 
 
