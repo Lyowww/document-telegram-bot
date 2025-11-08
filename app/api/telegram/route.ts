@@ -13,7 +13,7 @@ import {
   MESSAGES,
   sendDocument,
 } from '@/lib/telegram';
-import { generateNosudPdf, parseNosudText, generateFirstPdf, parseFirstText } from '@/lib/pdf';
+import { generateNosudFromHtml, parseNosudText, generateFirstPdf, parseFirstText } from '@/lib/pdf';
 
 export const runtime = 'nodejs';
 
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
         switch (data) {
           case 'MENU_NOSUD': {
             setState(chatId, { mode: 'AWAIT_NOSUD_INPUT' });
-            await sendMessage(chatId, MESSAGES.firstPrompt, { reply_markup: backKeyboard() });
+            await sendMessage(chatId, MESSAGES.nosudPrompt, { reply_markup: backKeyboard() });
             break;
           }
           case 'MENU_NOTARY': {
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
 
       const state = getState(chatId);
 
-      if (state.mode !== 'AWAIT_APOSTILLE_INPUT' && validateFirstInput(text)) {
+      if (state.mode === 'IDLE' && validateFirstInput(text)) {
         try {
           const parsed = parseFirstText(text);
           const pdf = await generateFirstPdf(parsed);
@@ -99,13 +99,12 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true });
       }
       if (state.mode === 'AWAIT_NOSUD_INPUT') {
-        if (!validateFirstInput(text)) {
-          await sendMessage(chatId, MESSAGES.firstInvalid, { reply_markup: backKeyboard() });
+        if (!validateNosudInput(text)) {
+          await sendMessage(chatId, MESSAGES.nosudInvalid, { reply_markup: backKeyboard() });
         } else {
-          await sendMessage(chatId, "Документ First сформирован");
           try {
-            const parsed = parseFirstText(text);
-            const pdf = await generateFirstPdf(parsed);
+            const parsed = parseNosudText(text);
+            const pdf = await generateNosudFromHtml(parsed);
             await sendDocument(chatId, pdf.bytes, pdf.fileName, {
               caption: `Документ сформирован. PIN: ${pdf.pin}\nQR-ссылка: ${pdf.verifyUrl}`,
               reply_markup: backKeyboard(),

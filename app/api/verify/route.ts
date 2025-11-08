@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPin, hasToken } from '@/lib/store';
+import { verifyPinForToken, findDocumentByToken } from '@/lib/documents';
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,12 +8,22 @@ export async function POST(request: NextRequest) {
     if (!token || !pin) {
       return NextResponse.json({ ok: false, error: 'MISSING_FIELDS' }, { status: 400 });
     }
-    if (!hasToken(token)) {
-      return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
-    }
-    const ok = verifyPin(token, pin);
-    if (!ok) {
-      return NextResponse.json({ ok: false, error: 'INVALID_PIN' }, { status: 200 });
+    // First, try persistent store (MongoDB)
+    const doc = await findDocumentByToken(token);
+    if (doc) {
+      const okDb = await verifyPinForToken(token, pin);
+      if (!okDb) {
+        return NextResponse.json({ ok: false, error: 'INVALID_PIN' }, { status: 200 });
+      }
+    } else {
+      // Fall back to in-memory token existence
+      if (!hasToken(token)) {
+        return NextResponse.json({ ok: false, error: 'NOT_FOUND' }, { status: 404 });
+      }
+      const ok = verifyPin(token, pin);
+      if (!ok) {
+        return NextResponse.json({ ok: false, error: 'INVALID_PIN' }, { status: 200 });
+      }
     }
     return NextResponse.json({ ok: true, fileUrl: `/api/file/${token}` });
   } catch {
