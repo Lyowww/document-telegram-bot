@@ -25,6 +25,7 @@ export type TelegramUpdate = {
 export type InlineKeyboardButton = {
   text: string;
   callback_data?: string;
+  url?: string;
 };
 
 export type InlineKeyboardMarkup = {
@@ -59,6 +60,30 @@ export async function sendMessage(
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     throw new Error(`Telegram sendMessage failed: ${res.status} ${res.statusText} ${body}`);
+  }
+}
+
+export async function editMessageText(
+  chatId: number,
+  messageId: number,
+  text: string,
+  options?: { reply_markup?: InlineKeyboardMarkup; parse_mode?: 'HTML' | 'Markdown' | 'MarkdownV2' }
+): Promise<void> {
+  const api = getTelegramApiBase();
+  const res = await fetch(`${api}/editMessageText`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      reply_markup: options?.reply_markup,
+      parse_mode: options?.parse_mode,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Telegram editMessageText failed: ${res.status} ${res.statusText} ${body}`);
   }
 }
 
@@ -127,6 +152,7 @@ type UserState =
   | { mode: 'AWAIT_NOSUD_INPUT' }
   | { mode: 'AWAIT_APOSTILLE_INPUT' }
   | { mode: 'AWAIT_NOTARY_INPUT' }
+  | { mode: 'AWAIT_SECOND_INPUT' }
 
 const chatIdToState = new Map<number, UserState>();
 
@@ -169,6 +195,14 @@ export function validateFirstInput(input: string): boolean {
   return true;
 }
 
+export function validateSecondInput(input: string): boolean {
+  const parts = input.split(',').map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) return false;
+  const [notaryName, translatorName] = parts;
+  if (!notaryName || !translatorName) return false;
+  return true;
+}
+
 export const MESSAGES = {
   welcome:
     '👋 Добро пожаловать в бот генерации документов!\n\nВыберите, пожалуйста, тип документа, который хотите сформировать:',
@@ -176,14 +210,22 @@ export const MESSAGES = {
     '📄Пожалуйста, введите через запятую следующие данные: Фамилия, Имя, Отчество, Дата рождения, ПИНФЛ\n\nПример: MARDIYEV, XUSEN, MANSUROVICH, 27.03.2000, 30109986180092',
   nosudInvalid:
     '⚠️Неверный формат. Введите все данные через запятую: Фамилия, Имя, Отчество, Дата рождения (ДД.ММ.ГГГГ), ПИНФЛ\n\nПример: MARDIYEV, XUSEN, MANSUROVICH, 27.03.2000, 30109986180092',
+  nosudWait:
+    '⏳ Пожалуйста, подождите. Эта функция находится в разработке.',
   apostillePrompt:
     '📄Пожалуйста, введите через запятую следующие данные: Ф.И.О. лица, подписавшего документ, и название организации\n\nПример: Ulmasov Bakhtiyor Abrorovich, CENTER OF PUBLIC SERVICES OF TAILOK DISTRICT',
   apostilleInvalid:
     '⚠️Неверный формат. Введите данные через запятую: Ф.И.О., Организация\n\nПример: Ulmasov Bakhtiyor Abrorovich, CENTER OF PUBLIC SERVICES OF TAILOK DISTRICT',
+  apostilleWait:
+    '⏳ Пожалуйста, подождите. Эта функция находится в разработке.',
   firstPrompt:
     '📄Пожалуйста, введите через запятую следующие данные: Имя, Фамилия (и другие данные при необходимости)\n\nПример: John, Doe',
   firstInvalid:
     '⚠️Неверный формат. Введите данные через запятую: Имя, Фамилия\n\nПример: John, Doe',
+  secondPrompt:
+    '📄Пожалуйста, введите через запятую следующие данные: ФИО нотариуса, ФИО переводчика (опционально: регион/город, адрес)\n\nПример: АЗИЗОВА ИНТИЗОРА ХУСЕНОВНА, ТОХИРОВА НИГИНА САМЕЕВНА, Самаркандская область город Самарканд, улица А. Жомий дом 64',
+  secondInvalid:
+    '⚠️Неверный формат. Введите данные через запятую: ФИО нотариуса, ФИО переводчика\n\nПример: АЗИЗОВА ИНТИЗОРА ХУСЕНОВНА, ТОХИРОВА НИГИНА САМЕЕВНА',
 };
 
 

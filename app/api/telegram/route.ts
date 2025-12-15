@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import {
   TelegramUpdate,
   sendMessage,
+  editMessageText,
   answerCallbackQuery,
   mainMenuKeyboard,
   backKeyboard,
@@ -9,15 +10,31 @@ import {
   setState,
   validateNosudInput,
   validateApostilleInput,
-  validateFirstInput, 
+  validateFirstInput,
+  validateSecondInput,
   MESSAGES,
   sendDocument,
 } from '@/lib/telegram';
-import { generateNosudFromHtml, parseNosudText, generateFirstPdf, parseFirstText } from '@/lib/pdf';
+import { generateNosudFromHtml, parseNosudText, generateFirstPdf, parseFirstText, generateNotaryPdf } from '@/lib/pdf';
+import { generateThirdPdf, parseThirdText } from '@/lib/pdf2';
+import { generateSecondPdf, parseSecondText } from '@/lib/pdf3';
 
 export const runtime = 'nodejs';
 
 const SECRET_TOKEN = process.env.TELEGRAM_WEBHOOK_SECRET as string | undefined;
+
+const ALLOWED_USER_IDS = [
+  1297828858,
+  766811959,
+  1650034270,
+  912958981,
+  7510625398,
+]
+
+function isUserAllowed(userId: number | undefined): boolean {
+  if (!userId) return false
+  return ALLOWED_USER_IDS.includes(userId)
+}
 
 export async function POST(request: Request) {
   if (SECRET_TOKEN) {
@@ -35,28 +52,44 @@ export async function POST(request: Request) {
 
   try {
     if (update.callback_query) {
-      const cq = update.callback_query;
+      const cq = update.callback_query
+      const userId = cq.from?.id
+      if (!isUserAllowed(userId)) {
+        return NextResponse.json({ ok: true })
+      }
       const chatId = cq.message?.chat.id;
+      const messageId = cq.message?.message_id;
       const data = cq.data;
-      if (chatId && data) {
+      if (chatId && messageId && data) {
         switch (data) {
           case 'MENU_NOSUD': {
             setState(chatId, { mode: 'AWAIT_NOSUD_INPUT' });
-            await sendMessage(chatId, MESSAGES.nosudPrompt, { reply_markup: backKeyboard() });
+            await editMessageText(chatId, messageId, MESSAGES.nosudPrompt, { reply_markup: backKeyboard() });
             break;
           }
           case 'MENU_NOTARY': {
-            setState(chatId, { mode: 'AWAIT_NOTARY_INPUT' });
+            try {
+              const defaultInput = {
+                notaryName: 'АЗИЗОВА ИНТИЗОРА ХУСЕНОВНА',
+                translatorName: 'ТОХИРОВА НИГИНА САМЕЕВНА',
+              };
+              const pdf = await generateSecondPdf(defaultInput);
+              await sendDocument(chatId, pdf.bytes, pdf.fileName);
+              await sendMessage(chatId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
+              setState(chatId, { mode: 'IDLE' });
+            } catch (err: any) {
+              await editMessageText(chatId, messageId, `Ошибка при генерации документа: ${err?.message ?? 'неизвестная ошибка'}`, { reply_markup: backKeyboard() });
+            }
             break;
           }
           case 'MENU_APOSTILLE': {
             setState(chatId, { mode: 'AWAIT_APOSTILLE_INPUT' });
-            await sendMessage(chatId, MESSAGES.apostillePrompt, { reply_markup: backKeyboard() });
+            await editMessageText(chatId, messageId, MESSAGES.apostillePrompt, { reply_markup: backKeyboard() });
             break;
           }
           case 'BACK_TO_MENU': {
             setState(chatId, { mode: 'IDLE' });
-            await sendMessage(chatId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
+            await editMessageText(chatId, messageId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
             break;
           }
         }
@@ -66,6 +99,10 @@ export async function POST(request: Request) {
     }
 
     if (update.message && update.message.text) {
+      const userId = update.message.from?.id
+      if (!isUserAllowed(userId)) {
+        return NextResponse.json({ ok: true })
+      }
       const { chat, text } = update.message;
       const chatId = chat.id;
 
@@ -78,6 +115,24 @@ export async function POST(request: Request) {
       if (text === '/start') {
         setState(chatId, { mode: 'IDLE' });
         await sendMessage(chatId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
+        return NextResponse.json({ ok: true });
+      }
+
+      if (text === '/nosud' || text.toLowerCase() === 'nosud') {
+        setState(chatId, { mode: 'AWAIT_NOSUD_INPUT' });
+        await sendMessage(chatId, MESSAGES.nosudPrompt, { reply_markup: backKeyboard() });
+        return NextResponse.json({ ok: true });
+      }
+
+      if (text === '/notary' || text.toLowerCase() === 'notary') {
+        setState(chatId, { mode: 'AWAIT_SECOND_INPUT' });
+        await sendMessage(chatId, MESSAGES.secondPrompt, { reply_markup: backKeyboard() });
+        return NextResponse.json({ ok: true });
+      }
+
+      if (text === '/apostille' || text.toLowerCase() === 'apostille') {
+        setState(chatId, { mode: 'AWAIT_APOSTILLE_INPUT' });
+        await sendMessage(chatId, MESSAGES.apostillePrompt, { reply_markup: backKeyboard() });
         return NextResponse.json({ ok: true });
       }
 
@@ -118,11 +173,36 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true });
       }
 
+      if (state.mode === 'AWAIT_SECOND_INPUT') {
+        if (!validateSecondInput(text)) {
+          await sendMessage(chatId, MESSAGES.secondInvalid, { reply_markup: backKeyboard() });
+        } else {
+          try {
+            const parsed = parseSecondText(text);
+            const pdf = await generateSecondPdf(parsed);
+            await sendDocument(chatId, pdf.bytes, pdf.fileName);
+            await sendMessage(chatId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
+            setState(chatId, { mode: 'IDLE' });
+          } catch (err: any) {
+            await sendMessage(chatId, `Ошибка при отправке документа: ${err?.message ?? 'неизвестная ошибка'}`);
+          }
+        }
+        return NextResponse.json({ ok: true });
+      }
+
       if (state.mode === 'AWAIT_APOSTILLE_INPUT') {
         if (!validateApostilleInput(text)) {
           await sendMessage(chatId, MESSAGES.apostilleInvalid, { reply_markup: backKeyboard() });
         } else {
-          setState(chatId, { mode: 'IDLE' });
+          try {
+            const parsed = parseThirdText(text);
+            const pdf = await generateThirdPdf(parsed);
+            await sendDocument(chatId, pdf.bytes, pdf.fileName);
+            await sendMessage(chatId, MESSAGES.welcome, { reply_markup: mainMenuKeyboard() });
+            setState(chatId, { mode: 'IDLE' });
+          } catch (err: any) {
+            await sendMessage(chatId, `Ошибка при отправке документа: ${err?.message ?? 'неизвестная ошибка'}`);
+          }
         }
         return NextResponse.json({ ok: true });
       }

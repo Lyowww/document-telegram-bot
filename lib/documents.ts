@@ -18,6 +18,10 @@ export type DocumentMeta = {
   applicationNo?: string;
   generatedDate?: string; // YYYY-MM-DD
   generatedDateTime?: string; // DD.MM.YYYY HH:MM
+  docNumber?: string;
+  docDate?: string;
+  notaryName?: string;
+  translatorName?: string;
 };
 
 export async function saveDocumentMeta(meta: DocumentMeta): Promise<void> {
@@ -46,6 +50,15 @@ export async function verifyPinForToken(token: string, pin: string): Promise<boo
     return doc.pin === pin;
   } catch {
     return false;
+  }
+}
+
+export async function findDocumentByNumberAndDate(docNumber: string, docDate: string): Promise<DocumentMeta | null> {
+  try {
+    const col = await getCollection<DocumentMeta>('documents');
+    return await col.findOne({ docNumber, docDate, type: 'APOSTILLE' });
+  } catch {
+    return null;
   }
 }
 

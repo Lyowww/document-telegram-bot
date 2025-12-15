@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+	<meta charset="utf-8" />
+	<title>Notarization Document</title>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: 'Times New Roman', serif;
+			background-color: #ffffff;
+			padding: 0
+		}
+
+		b,
+		strong {
+			font-weight: 700 !important;
+		}
+
+		.document {
+			background-color: #ffffff;
+			width: 210mm;
+			height: 297mm;
+			margin: 0 auto;
+		padding: 12mm 18mm 12mm 18mm;
+			page-break-after: avoid;
+			page-break-inside: avoid;
+			position: relative;
+			font-size: 11pt;
+		}
+
+		.header {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			margin-bottom: 10mm;
+			font-size: 9pt;
+		}
+
+		.header-date {
+			margin-bottom: 2px;
+			font-weight: 700;
+		}
+
+		.header-system {
+			margin-right: 30px;
+		}
+
+		.section {
+		margin-bottom: 8mm;
+		}
+
+		.location-date {
+			margin-bottom: 7mm;
+			text-align: justify;
+			font-size: 11pt;
+			line-height: 1.4;
+			white-space: pre-line;
+		}
+
+		.notary-statement {
+			text-align: justify;
+		margin-bottom: 5mm;
+			font-size: 11pt;
+			line-height: 1.4;
+			text-indent: 10mm;
+		}
+
+		.notary-statement p {
+			text-indent: 10mm;
+			margin: 0 0 2mm 0;
+		}
+
+		.registration {
+		margin-bottom: 5mm;
+			font-size: 11pt;
+		}
+
+		.fees {
+		margin-bottom: 6mm;
+			font-size: 11pt;
+		}
+
+		.fee-item {
+			margin-bottom: 3px;
+		}
+
+		.notary-info {
+			display: flex;
+			align-items: flex-start;
+			justify-content: space-between;
+			margin-top: 10mm;
+		}
+
+		.stamp-placeholder {
+			width: 40mm;
+			height: 40mm;
+			flex-shrink: 0;
+		}
+
+		.qr-block {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: flex-start;
+			gap: 3mm;
+		}
+
+		.qr-wrapper {
+			position: relative;
+			width: 30mm;
+			margin: 0 auto;
+		}
+
+		.qr-code-area {
+			width: 30mm;
+			height: 30mm;
+			flex-shrink: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.qr-code-area img {
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
+		}
+
+		.qr-name {
+			position: absolute;
+			top: 50%;
+			left: calc(100% + 40px);
+			transform: translateY(-50%);
+			font-size: 10pt;
+			font-weight: 400;
+			letter-spacing: 0.5px;
+			text-rendering: optimizeLegibility;
+			-webkit-font-smoothing: antialiased;
+			white-space: nowrap;
+		}
+
+		.signature-placeholder {
+			width: 45mm;
+			height: 25mm;
+			flex-shrink: 0;
+		}
+
+		.verification-note {
+			font-size: 8pt;
+			color: #000;
+			line-height: 1.35;
+			max-width: 80mm;
+			text-align: center;
+		}
+
+		.divider {
+			border-top: 1px solid #000;
+		margin: 8mm 0;
+		}
+
+		.english-section {
+			margin-top: 0;
+		}
+
+		.english-footer {
+		margin-top: 6mm;
+			font-size: 11pt;
+		}
+
+		.english-footer-row {
+			display: flex;
+			align-items: center;
+			justify-content: flex-start;
+		gap: 30px;
+		}
+
+		.english-label {
+			white-space: nowrap;
+		}
+
+		.english-line {
+			flex: 0 0 40mm;
+			border-bottom: 1px solid #000;
+			height: 0;
+		}
+
+		.english-text {
+			white-space: nowrap;
+		}
+
+		.english-seal {
+		margin-top: 2mm;
+		font-size: 9pt;
+		font-style: italic;
+		}
+
+		@media print {
+			body {
+				margin: 0;
+			}
+		}
+
+		@page {
+			size: A4;
+			margin: 0;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="document">
+		<div class="header">
+			<div>
+				<div class="header-date"><b>{{DATE_TIME}}</b></div>
+			</div>
+			<div class="header-system">АИС «Нотариус»</div>
+			<div></div>
+		</div>
+
+		<div class="section">
+			<div class="location-date">
+				{{LOCATION_DATE_RU}}
+			</div>
+
+			<div class="notary-statement">
+				Я, <b>AZIZOVA INTIZORA XUSENOVNA</b> Нотариус, города Самарканда, Самаркандской области,
+				занимающийся частной практикой расположенной по адресу: Самаркандская область, город Самарканд, ул.
+				А.Жомий, дом 64, свидетельствую подлинность подписи известного мне переводчика <b>TOHIROVA NIGINA
+					SAMEEVNA</b>. Личность подписавшего документ установлена, дееспособность проверена, т.е. при личном
+				общении с ним, его дееспособность сомнений не вызвала.
+			</div>
+
+			<div class="registration">
+				Зарегистрировано в реестре за №{{REG_NUMBER}}
+			</div>
+
+			<div class="fees">
+				<div class="fee-item">Взыскано государственной пошлины: {{STATE_DUTY}} ({{STATE_DUTY_WORDS}} сум ноль
+					тийин)</div>
+				<div class="fee-item">Плата за дополнительные услуги: {{ADDITIONAL_FEE}} ({{ADDITIONAL_FEE_WORDS}} сум
+					ноль тийин)</div>
+			</div>
+
+			<div class="notary-info">
+				<div class="stamp-placeholder"></div>
+				<div class="qr-block">
+					<div class="qr-wrapper">
+						<div class="qr-code-area">{{QR_CODE}}</div>
+						<p class="qr-name"><b>L.X.AZIZOVA</b></p>
+					</div>
+					<div class="verification-note">
+						Ушбу нотариал ҳаракат ҳолатини е-notarius электрон портали оркали текширишингиз мумкин
+					</div>
+				</div>
+				<div class="signature-placeholder"></div>
+			</div>
+		</div>
+
+		<div class="divider"></div>
+
+		<div class="section english-section">
+			<div class="location-date">
+				{{LOCATION_DATE_EN}}
+			</div>
+
+			<div class="notary-statement">
+				1. <b>AZIZOVA INTIZORA KHUSENOVNA</b>. The Notary carrying out private activity in Samarkand city.<br>
+				Samarkand region, Republic of Uzbekistan, hereby have certified the authenticity of the forthcoming
+				signature, affixed
+				by the translator <b>TOMIROVA NIGINA SAMEEVNA</b>, whom I personally know.<br>
+				The personality of the translator was determined, legal capacity was checked<br>
+				There didn't arouse any doubt about him legal capacity during the personal communication and in the time
+				of carrying out this notary act, there isn't any information about her incapability.<br>
+				Translator is warned aboat the responsibility for the incorrect translation by the Notary.
+			</div>
+
+			<div class="registration">
+				Registered under the #{{REG_NUMBER}}
+			</div>
+
+			<div class="fees">
+				<div class="fee-item">Collected a state duty in the amount of {{STATE_DUTY_EN}} sums.</div>
+				<div class="fee-item">Collected {{ADDITIONAL_FEE_EN}} sums</div>
+			</div>
+
+			<div class="english-footer">
+				<div class="english-footer-row">
+					<div class="english-label"><b>NOTARY:</b></div>
+					<div class="english-text"><b>/Signed/</b></div>
+				</div>
+				<div class="english-seal">
+					<i><b>Seal</b>: Republic of Uzbekistan, Samarkand region, Samarkand city, Notary carrying out private activity,<br> Azizova Intizora Khusenovna</i>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+
+</html>

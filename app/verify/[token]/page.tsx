@@ -1,67 +1,123 @@
-'use client';
+'use client'
 
-import { useState, FormEvent } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, FormEvent } from 'react'
+import { useParams } from 'next/navigation'
 
 export default function VerifyPage() {
-  const { token } = useParams<{ token: string }>();
-  console.log(token);
-  const [pin, setPin] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { token } = useParams<{ token: string }>()
+  const [pin, setPin] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
     try {
       const res = await fetch('/api/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, pin }),
-      });
-      const data = await res.json();
+      })
+      const data = await res.json()
       if (!data.ok) {
-        setError('Неверный PIN-код. Попробуйте снова.');
-        setLoading(false);
-        return;
+        setError('Неверный PIN-код. Попробуйте снова.')
+        setLoading(false)
+        return
       }
-      window.location.href = data.fileUrl as string;
+      window.location.href = data.fileUrl as string
     } catch {
-      setError('Ошибка. Попробуйте позже.');
-      setLoading(false);
+      setError('Ошибка. Попробуйте позже.')
+      setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5]">
-      <div className="w-full max-w-md bg-white shadow-sm border border-zinc-200 rounded-md p-6">
-        <h1 className="text-xl font-semibold text-center mb-1">Введите код доступа</h1>
-        <p className="text-sm text-zinc-600 text-center mb-6">
-          Введите PIN-код, указанный в PDF-файле.
-        </p>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder="Например: 123456"
-            value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            className="w-full border border-zinc-300 rounded px-3 py-2 outline-none text-black focus:ring-2 focus:ring-blue-500"
-            required
-          />
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+    <div style={{
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      backgroundColor: '#f5f5f5',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: '100vh',
+      padding: '20px',
+      margin: 0,
+    }}>
+      <div style={{
+        background: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+        padding: '40px',
+        maxWidth: '400px',
+        width: '100%',
+      }}>
+        <h1 style={{
+          fontSize: '24px',
+          fontWeight: 600,
+          textAlign: 'center',
+          marginBottom: '8px',
+          color: '#1a1a1a',
+        }}>Введите код доступа</h1>
+        <p style={{
+          fontSize: '14px',
+          color: '#666',
+          textAlign: 'center',
+          marginBottom: '32px',
+        }}>Введите PIN-код, указанный в PDF-файле</p>
+        <form onSubmit={onSubmit}>
+          <div style={{ marginBottom: '24px' }}>
+            <label htmlFor="pin" style={{
+              display: 'block',
+              fontSize: '14px',
+              fontWeight: 500,
+              marginBottom: '8px',
+              color: '#1a1a1a',
+            }}>PIN-код</label>
+            <input
+              id="pin"
+              type="text"
+              inputMode="numeric"
+              placeholder="Введите PIN-код"
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              required
+              maxLength={6}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                fontSize: '16px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                outline: 'none',
+              }}
+            />
+            {error && <div style={{
+              color: '#d32f2f',
+              fontSize: '14px',
+              marginTop: '8px',
+            }}>{error}</div>}
+          </div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded py-2 font-medium disabled:opacity-60"
+            style={{
+              width: '100%',
+              padding: '12px 24px',
+              fontSize: '16px',
+              fontWeight: 500,
+              color: 'white',
+              backgroundColor: loading ? '#999' : '#0066cc',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+            }}
           >
             {loading ? 'Проверка…' : 'Подтвердить'}
           </button>
         </form>
       </div>
     </div>
-  );
+  )
 }
 
 

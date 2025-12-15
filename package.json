@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@sparticuz/chromium": "^141.0.0",
-    "next": "16.0.1",
+    "mongodb": "^7.0.0",
+    "next": "^16.0.7",
     "pdf-lib": "^1.17.1",
     "puppeteer": "^24.28.0",
     "puppeteer-core": "^24.28.0",

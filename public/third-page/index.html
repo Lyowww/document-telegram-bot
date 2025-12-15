@@ -1,0 +1,376 @@
+<html lang="ru"><head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="icon" href="/third-page/images/favicon.ico" type="image/x-icon">
+    <title>e-register</title>
+    <link href="/third-page/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="/third-page/css/app.c816d106.css" rel="stylesheet">
+    <link href="/third-page/css/chunk-vendors.0014bfcb.css" rel="stylesheet">
+    <link href="https://davreestr.docrepository.info/e-register_files/app.9837f053.js" rel="preload" as="script">
+    <link href="https://davreestr.docrepository.info/e-register_files/chunk-vendors.66f10add.js" rel="preload" as="script">
+    <script src="/third-page/js/api.js" async defer></script>
+    <style>
+        #recaptcha-container {
+            min-height: 78px;
+        }
+        .fake-recaptcha {
+            display: inline-flex;
+            align-items: center;
+            padding: 0;
+            border: 2px solid #d3d3d3;
+            border-radius: 2px;
+            background: #f9f9f9;
+            cursor: pointer;
+            user-select: none;
+            font-size: 14px;
+            font-family: Roboto, Helvetica, Arial, sans-serif;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+            transition: border-color 0.2s, box-shadow 0.2s;
+            width: 304px;
+            height: 78px;
+            position: relative;
+        }
+        .fake-recaptcha:hover {
+            border-color: #4285f4;
+            box-shadow: 0 0 0 1px rgba(66,133,244,0.5);
+        }
+        .fake-recaptcha.verified {
+            border-color: #0f9d58;
+            background: #f9f9f9;
+            box-shadow: 0 0 0 1px rgba(15,157,88,0.5);
+        }
+        .fake-recaptcha-checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            padding: 8px 8px 8px 8px;
+            height: 100%;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .fake-recaptcha-checkbox {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #c1c1c1;
+            border-radius: 2px;
+            margin-right: 12px;
+            vertical-align: middle;
+            position: relative;
+            background: #fff;
+            transition: background-color 0.2s, border-color 0.2s;
+            flex-shrink: 0;
+            box-sizing: border-box;
+        }
+        .fake-recaptcha:hover .fake-recaptcha-checkbox {
+            border-color: #4285f4;
+        }
+        .fake-recaptcha.verified .fake-recaptcha-checkbox {
+            background: #0f9d58;
+            border-color: #0f9d58;
+        }
+        .fake-recaptcha.verified .fake-recaptcha-checkbox::after {
+            content: '';
+            position: absolute;
+            left: 7px;
+            top: 3px;
+            width: 5px;
+            height: 10px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+        .fake-recaptcha-text {
+            color: #202124;
+            font-size: 14px;
+            line-height: 1.4;
+            font-weight: 400;
+            letter-spacing: 0.2px;
+        }
+        .fake-recaptcha-logo {
+            margin-left: auto;
+            padding-right: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: center;
+            height: 100%;
+        }
+        .fake-recaptcha-logo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        .fake-recaptcha-logo-svg {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 2px;
+        }
+        .fake-recaptcha-logo-text {
+            font-size: 8px;
+            color: #555;
+            line-height: 1.2;
+            font-family: Roboto, Helvetica, Arial, sans-serif;
+            text-align: right;
+        }
+        .fake-recaptcha-logo-text-link {
+            color: #555;
+            text-decoration: none;
+        }
+        .fake-recaptcha-logo-text-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head><body>
+
+    <script>
+        let recaptchaVerified = false
+        let docNumber = ''
+        let docDate = ''
+
+        function autoVerifyRecaptcha() {
+            setTimeout(() => {
+                const fakeRecaptcha = document.getElementById('fake-recaptcha')
+                if (fakeRecaptcha && !recaptchaVerified && !fakeRecaptcha.classList.contains('verified')) {
+                    recaptchaVerified = true
+                    fakeRecaptcha.classList.add('verified')
+                }
+            }, 500)
+        }
+
+        function downloadPdf() {
+            if (!docNumber || !docDate) {
+                alert('Please fill in the apostille number and date first')
+                return
+            }
+            const pdfUrl = `/api/third-pdf?number=${encodeURIComponent(docNumber)}&date=${encodeURIComponent(docDate)}`
+            const link = document.createElement('a')
+            link.href = pdfUrl
+            link.download = `Apostille_No_${docNumber}_from_${docDate}.pdf`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+        }
+
+        function updateContentFromFileName() {
+            const urlParams = new URLSearchParams(window.location.search)
+            docNumber = urlParams.get('number') || ''
+            docDate = urlParams.get('date') || ''
+            let document = urlParams.get('document') || ''
+
+            if (!docNumber || !docDate) {
+                const fileName = window.location.pathname.split('/').pop()
+                if (fileName && fileName.includes('number=')) {
+                    const [numberParam, dateParam] = fileName.split('&')
+                    docNumber = numberParam.split('=')[1]
+                    docDate = dateParam.split('=')[1].replace('.html', '')
+                }
+            }
+
+            const apostilleInput = document.getElementById('input-apostille')
+            const dateInput = document.getElementById('input-date')
+            const documentInput = document.getElementById('input')
+            const label = document.getElementById('apostille-label')
+
+            if (docNumber && apostilleInput) {
+                apostilleInput.value = docNumber
+            }
+            if (docDate && dateInput) {
+                dateInput.value = docDate
+            }
+            if (document && documentInput) {
+                documentInput.value = document
+            }
+            if (docNumber && docDate && label) {
+                label.innerText = `Apostille No ${docNumber} from ${docDate}`
+                label.onclick = function(e) {
+                    e.preventDefault()
+                    downloadPdf()
+                    return false
+                }
+                label.style.cursor = 'pointer'
+            }
+
+            autoVerifyRecaptcha()
+        }
+
+        function onFakeRecaptchaClick() {
+            const fakeRecaptcha = document.getElementById('fake-recaptcha')
+            if (fakeRecaptcha) {
+                if (fakeRecaptcha.classList.contains('verified')) {
+                    fakeRecaptcha.classList.remove('verified')
+                    recaptchaVerified = false
+                } else {
+                    fakeRecaptcha.classList.add('verified')
+                    recaptchaVerified = true
+                }
+            }
+        }
+
+        window.onFakeRecaptchaClick = onFakeRecaptchaClick
+        window.downloadPdf = downloadPdf
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', updateContentFromFileName)
+        } else {
+            updateContentFromFileName()
+        }
+    </script>
+
+
+
+    <noscript>
+        <strong>We're sorry but e-register-client doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+    <div id="app" data-v-app="">
+        <header class="app-header">
+            <div class="container--max-width">
+                <img class="app-header__logo" src="/third-page/images/gerb.cb42fc79.png" alt="gerb">
+                <h2 class="app_header__title">Information system of electronic apostille and electronic register of certified documents</h2>
+                <div class="lng-switcher app_header__lang-swr">
+                    <button class="lng-switcher__selected-lng"><span class="lng-switcher__selected-lng-label">English</span></button>
+                    <ul class="lng-switcher__langs-list" style="display: none;">
+                        <li class="lng-switcher__langs-list-item">English</li>
+                        <li class="lng-switcher__langs-list-item">Uzbek</li>
+                    </ul>
+                </div>
+            </div>
+        </header>
+        <main class="app-main">
+            <div class="container--max-width">
+                <h2 class="app-main__title">Verification of affixed apostilles in the Republic of Uzbekistan</h2>
+                <section class="c-card" style="margin-bottom: 1rem;">
+                    <div class="c-card__header">
+                        <h4 class="c-card__title">For verification, please enter the data of the existing Apostille</h4>
+                        <h6 class="msg msg--warning"><span>All fields are required</span></h6>
+                    </div>
+                    <div class="c-card__body">
+                        <div class="search-form">
+                            <div class="field-wrapp" required="">
+                                <div class="field-wrapp__label">Apostille</div>
+                                <input id="input-apostille" type="text" class="f-input" placeholder="Indicate the Apostille number">
+                                <div class="field-wrapp__error" style="display: none;"></div>
+                            </div>
+                            <div class="field-wrapp" required="">
+                                <div class="field-wrapp__label">Date of Apostille affixing</div>
+                                <input id="input-date" class="el-input__inner" type="text" autocomplete="off" placeholder="Specify the date of affixing">
+                                <div class="field-wrapp__error" style="display: none;"></div>
+                            </div>
+                            <div class="search-form__separator"></div>
+                            <div class="recaptcha search-form__field--margin-top">
+                                <div id="recaptcha-container" style="width: 304px; height: 78px;">
+                                    <div id="fake-recaptcha" class="fake-recaptcha">
+                                        <div class="fake-recaptcha-checkbox-wrapper">
+                                            <div class="fake-recaptcha-checkbox"></div>
+                                            <div class="fake-recaptcha-text">I'm not a robot</div>
+                                            <div class="fake-recaptcha-logo">
+                                                <div class="fake-recaptcha-logo-container">
+                                                    <svg class="fake-recaptcha-logo-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                                                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                                                    </svg>
+                                                    <div class="fake-recaptcha-logo-text">
+                                                        <a href="#" class="fake-recaptcha-logo-text-link" onclick="return false;">reCAPTCHA</a>
+                                                    </div>
+                                                    <div class="fake-recaptcha-logo-text">
+                                                        <a href="#" class="fake-recaptcha-logo-text-link" onclick="return false;">Privacy</a> - <a href="#" class="fake-recaptcha-logo-text-link" onclick="return false;">Terms</a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <form action="?" method="POST" style="margin-top: 10px;" onsubmit="return false;">
+                                    <div class="search-form__btns">
+                                        <button type="button" class="f-button f-button--secondary" onclick="document.getElementById('input-apostille').value=''; document.getElementById('input-date').value=''; document.getElementById('input').value=''; document.getElementById('fake-recaptcha').classList.remove('verified'); recaptchaVerified=false; docNumber=''; docDate='';">Clear</button>
+                                        <button type="button" id="find-btn" class="f-button f-button--primary" onclick="downloadPdf();">Find</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section class="c-card" style="margin-bottom: 1rem;">
+                    <div class="c-card__header">
+                        <h4 class="c-card__title">About apostille</h4>
+                    </div>
+                    <div class="c-card__body">
+                        <div class="doc-card">
+                            <i class="icon-file"></i>
+                            <a id="apostille-label" href="#" class="doc-card__label" onclick="downloadPdf(); return false;" style="cursor: pointer;">Apostille No</a>
+                        </div>
+                        <div class="">
+                            <h6 class="msg msg--info" style="margin: 20px 0px 10px;"><span>To view the document to be apostilled, enter its serial or registration number!</span></h6>
+                            <div class="search-document-form">
+                                <div class="field-wrapp" required="">
+                                    <div class="field-wrapp__label">Document number</div>
+                                    <input id="input" type="text" class="f-input" placeholder="Indicate the document number">
+                                    <div class="field-wrapp__error" style="display: none;"></div>
+                                </div>
+                                <button class="f-button f-button--primary f-button--disabled" id="look-btn" style="margin-bottom: 20px;" href="https://minjust.uz/">Look</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section class="c-card" style="margin-bottom: 1rem;">
+                    <div class="c-card__header">
+                        <h4 class="c-card__title">About site</h4>
+                    </div>
+                    <div class="c-card__body">
+                        <p class="about-us__p">On this website you can verify the authenticity of the Apostille in the Republic of Uzbekistan. You can also visually check the scanned versions of the Apostille documents.</p>
+                        <p class="about-us__p">To verify the issued Apostille, you must enter the number and date of the Apostille document. When you click the Search button, the Apostille document and the main document will open.</p>
+                    </div>
+                </section>
+                <section class="c-card" style="margin-bottom: 1rem;">
+                    <div class="c-card__header">
+                        <h4 class="c-card__title">Contacts</h4>
+                    </div>
+                    <div class="c-card__body">
+                        <div>
+                            <div class="contacts-card__title">Supreme Court of the Republic of Uzbekistan</div>
+                            <ul class="contacts-card__list">
+                                <li class="contacts-card__list-item"><a class="contacts-card__list-item-value--link" href="https://sud.uz/" target="_blank">https://sud.uz</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="contacts-card__title">Ministry of Justice of the Republic of Uzbekistan</div>
+                            <ul class="contacts-card__list">
+                                <li class="contacts-card__list-item"><a class="contacts-card__list-item-value--link" href="https://minjust.uz/" target="_blank">https://minjust.uz</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="contacts-card__title">The Ministry of Foreign Affairs of the Republic of Uzbekistan</div>
+                            <ul class="contacts-card__list">
+                                <li class="contacts-card__list-item"><a class="contacts-card__list-item-value--link" href="https://www.mfa.uz/" target="_blank">https://www.mfa.uz</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="contacts-card__title">The State Inspection for Supervision of Quality in Education under the Cabinet of Ministers of the Republic of Uzbekistan</div>
+                            <ul class="contacts-card__list">
+                                <li class="contacts-card__list-item"><a class="contacts-card__list-item-value--link" href="https://www.tdi.uz/" target="_blank">https://www.tdi.uz</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="contacts-card__title">General Prosecutor's Office of the Republic of Uzbekistan</div>
+                            <ul class="contacts-card__list">
+                                <li class="contacts-card__list-item"><a class="contacts-card__list-item-value--link" href="https://prokuratura.uz/" target="_blank">https://prokuratura.uz</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+        <footer class="app-footer">
+            <div class="container--max-width">
+                <span class="app-footer__dev-info">Developed with the support of the Joint Project of the Public Services Agency under the Ministry of Justice of the Republic of Uzbekistan, the European Union and UNDP in Uzbekistan "Improving the delivery of public services and improving the level of governance in rural areas of Uzbekistan.</span>
+                <img src="/third-page/images/eu_logo.d1762d58.svg" class="app-footer__logo" alt="eu_logo">
+                <img src="/third-page/images/Minjust_logo.bc9e22e2.svg" class="app-footer__logo" alt="Minjust_logo">
+                <img src="/third-page/images/PSA_logo.19b63c13.svg" class="app-footer__logo" alt="PSA_logo">
+                <img src="/third-page/images/UNDP_logo.20a3ce99.svg" class="app-footer__logo" alt="UNDP_logo">
+            </div>
+        </footer>
+    </div>
+
+</body></html>
